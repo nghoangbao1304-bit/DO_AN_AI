@@ -51,13 +51,82 @@ class KnapsackApp:
     def load_data_and_populate_tree(self, filename: str):
         pass 
     def clear_results(self):
-        pass 
+        # Xoá nội dung của các ô Text hiển thị kết quả và lịch sử
+        try:
+            self.hc_result.delete('1.0', tk.END)
+            self.hc_history.delete('1.0', tk.END)
+            self.gwo_result.delete('1.0', tk.END)
+            self.gwo_history.delete('1.0', tk.END)
+        except Exception:
+            # Nếu widget chưa được tạo hoặc có lỗi, bỏ qua
+            return
 
     def _run_single_algo(self, method_name, algo_class, result_text, history_text, names, values, weights, max_w, max_iter):
-        pass 
+        """
+        Worker chạy trong thread phụ: khởi tạo thuật toán, gọi .solve(), tính tổng giá trị/trọng lượng
+        và gửi kết quả về GUI thread qua self.root.after.
+        """
+        try:
+            # Khởi tạo thuật toán; constructor các thuật toán phù hợp với thứ tự:
+            # (item_names, item_values, item_weights, knapsack_capacity, max_iterations)
+            algo = algo_class(names, values, weights, max_w, max_iter)
+
+            selected_items, history, exec_time = algo.solve()
+
+            # Lấy tổng giá trị và trọng lượng từ nghiệm tốt nhất lưu trong đối tượng thuật toán
+            try:
+                total_val, total_w = algo._calculate_fitness(algo.best_solution)
+            except Exception:
+                # Dự phòng: tính lại bằng danh sách selected_items
+                total_val = 0
+                total_w = 0
+                name_to_index = {n: i for i, n in enumerate(names)}
+                for n in selected_items:
+                    idx = name_to_index.get(n)
+                    if idx is not None:
+                        total_val += values[idx]
+                        total_w += weights[idx]
+
+            # Đẩy kết quả về GUI thread một cách an toàn
+            self.root.after(0, lambda: self._update_gui(
+                method_name, selected_items, history, exec_time, total_val, total_w, max_w,
+                names, values, weights, result_text, history_text
+            ))
+
+        except Exception as e:
+            # Nếu có lỗi trong thread, hiển thị messagebox trên GUI thread
+            self.root.after(0, lambda: messagebox.showerror(f"Lỗi {method_name}", str(e)))
 
     def _update_gui(self, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text):
-        pass 
+        """
+        Cập nhật các widget Text trên GUI (chạy trên main thread).
+        - result_text: Text widget để in kết quả tóm tắt
+        - history_text: Text widget để in lịch sử iteration
+        """
+        try:
+            # Cập nhật phần kết quả tóm tắt
+            result_text.config(state='normal')
+            result_text.delete('1.0', tk.END)
+            header = f"{method_name} - Kết quả\n"
+            meta = f"Tổng giá trị: {total_val}    Tổng trọng lượng: {total_w} / {max_w}\n"
+            time_line = f"Thời gian: {t:.4f} giây\n"
+            items_line = "Chọn: " + (', '.join(selected) if selected else 'Không có') + "\n"
+            result_text.insert(tk.END, header + meta + time_line + items_line)
+            result_text.config(state='disabled')
+
+            # Cập nhật lịch sử
+            history_text.config(state='normal')
+            history_text.delete('1.0', tk.END)
+            if hist:
+                if isinstance(hist, list):
+                    history_text.insert(tk.END, "\n".join(hist))
+                else:
+                    history_text.insert(tk.END, str(hist))
+            history_text.config(state='disabled')
+
+        except Exception as e:
+            # Hiển thị lỗi nhỏ trong messagebox nếu cập nhật GUI thất bại
+            messagebox.showerror("Lỗi cập nhật GUI", str(e))
     def _check_running_threads(self):
         pass 
     def start_parallel_run(self):
