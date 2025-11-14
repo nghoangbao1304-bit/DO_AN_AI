@@ -26,25 +26,70 @@ class KnapsackApp:
 
         self.create_widgets()
 
-    def create_widgets(self):
- 
-        self.max_w_entry = ttk.Entry(self.root)
-        self.iter_entry = ttk.Entry(self.root)
-        self.run_button = ttk.Button(self.root, text="Chạy (Chưa gán lệnh)") 
+def create_widgets(self):
+        """Thiết lập tất cả các thành phần giao diện."""
+        top_frame = ttk.Frame(self.root)
+        top_frame.pack(fill="x", padx=10, pady=5)
+
+        ttk.Label(top_frame, text="Khối lượng tối đa:").pack(side="left", padx=5)
+        self.max_w_entry = ttk.Entry(top_frame, width=8)
+        self.max_w_entry.pack(side="left", padx=5)
+        self.max_w_entry.insert(0, "5000") 
+
+        ttk.Label(top_frame, text="Số lần lặp:").pack(side="left", padx=5)
+        self.iter_entry = ttk.Entry(top_frame, width=8)
+        self.iter_entry.insert(0, "100")
+        self.iter_entry.pack(side="left", padx=5)
+
+        self.run_button = ttk.Button(top_frame, text="Chạy Song Song", command=self.start_parallel_run)
+        self.run_button.pack(side="left", padx=10)
         
-        self.data_combobox = ttk.Combobox(self.root, values=self.data_files)
-        self.tree = ttk.Treeview(self.root)
+        ttk.Label(top_frame, text="Chọn Dataset:").pack(side="left", padx=(10, 5))
+        self.data_combobox = ttk.Combobox(
+            top_frame, 
+            values=self.data_files, 
+            state="readonly", 
+            width=22
+        )
+        self.data_combobox.set(self.data_files[0]) 
+        self.data_combobox.pack(side="left", padx=5)
         
-        self.hc_result = Text(self.root, height=8)
-        self.hc_history = Text(self.root)
-        self.gwo_result = Text(self.root, height=8)
-        self.gwo_history = Text(self.root)
-       
+        ttk.Button(top_frame, text="Tải Dữ Liệu", command=self.load_selected_data).pack(side="left", padx=5)
+        
+        ttk.Button(top_frame, text="Xóa kết quả", command=self.clear_results).pack(side="left", padx=10)
+
+        columns = ("Tên", "Giá trị", "Khối lượng")
+        self.tree = ttk.Treeview(self.root, columns=columns, show="headings", height=10)
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, anchor="center", width=150)
+        self.tree.pack(fill="x", padx=10, pady=5)
+        
+        bottom_frame = ttk.Frame(self.root)
+        bottom_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        hc_frame = ttk.Frame(bottom_frame)
+        hc_frame.pack(side="left", fill="both", expand=True, padx=5)
+        ttk.Label(hc_frame, text="HILL CLIMBING", font=("Arial", 12, "bold")).pack(pady=5)
+        self.hc_result = Text(hc_frame, height=8, bg="white", fg="black", font=("Consolas", 10))
+        self.hc_result.pack(fill="x", pady=5)
+        ttk.Label(hc_frame, text="LỊCH SỬ HC", font=("Arial", 10, "bold")).pack(pady=5)
+        self.hc_history = Text(hc_frame, bg="white", fg="black", font=("Consolas", 10))
+        self.hc_history.pack(fill="both", expand=True, pady=5)
+        gwo_frame = ttk.Frame(bottom_frame)
+        gwo_frame.pack(side="left", fill="both", expand=True, padx=5)
+        ttk.Label(gwo_frame, text="GREY WOLF OPTIMIZER", font=("Arial", 12, "bold")).pack(pady=5)
+        self.gwo_result = Text(gwo_frame, height=8, bg="white", fg="black", font=("Consolas", 10))
+        self.gwo_result.pack(fill="x", pady=5)
+        ttk.Label(gwo_frame, text="LỊCH SỬ GWO", font=("Arial", 10, "bold")).pack(pady=5)
+        self.gwo_history = Text(gwo_frame, bg="white", fg="black", font=("Consolas", 10))
+        self.gwo_history.pack(fill="both", expand=True, pady=5)
+        
         try:
             self.load_data_and_populate_tree(self.data_files[0])
         except Exception as e:
-            pass 
-
+            messagebox.showerror("Lỗi Tải Dữ Liệu Mặc Định", f"Không thể tải '{self.data_files[0]}'.\n{e}")
+            
     def load_selected_data(self):
         """Lấy tên file từ Combobox và tải dữ liệu."""
         filename = self.data_combobox.get()
@@ -159,5 +204,6 @@ class KnapsackApp:
         )
         thread_gwo.start() 
     
+
 
     
