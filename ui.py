@@ -97,3 +97,34 @@ class KnapsackApp:
     def start_parallel_run(self):
 
         pass 
+    def load_selected_data(self):
+        """Lấy tên file từ Combobox và tải dữ liệu."""
+        filename = self.data_combobox.get()
+        if not filename:
+            messagebox.showwarning("Chưa chọn file", "Vui lòng chọn một dataset từ danh sách.")
+            return
+
+        try:
+            self.load_data_and_populate_tree(filename)
+        except Exception as e:
+            messagebox.showerror("Lỗi Tải File", f"Không thể tải file: {filename}\n{e}")
+
+    def load_data_and_populate_tree(self, filename: str):
+        """Tải dữ liệu từ file CSV được chỉ định và hiển thị lên Treeview."""
+        self.items_data = load_knapsack_data_from_csv(filename)
+
+        if not self.items_data['names']:
+             messagebox.showerror("Lỗi", f"Không tìm thấy dữ liệu hoặc file '{filename}' bị lỗi.")
+             self.items = []
+             return
+
+        self.items = list(zip(self.items_data['names'], self.items_data['values'], self.items_data['weights']))
+
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for name, val, w in self.items:
+            self.tree.insert("", "end", values=(name, val, w))
+
+        self.clear_results() # Gọi hàm của Dev 4
+        self.root.title(f"Knapsack Optimization - {filename}")
