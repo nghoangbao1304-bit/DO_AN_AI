@@ -26,6 +26,7 @@ class GreyWolfOptimizer(KnapsackAlgorithmBase):
         beta = scored_wolves[1][1][:]
         delta = scored_wolves[2][1][:]
         self.best_value = scored_wolves[0][0]
+        self.best_solution = alpha[:]
         self.history = []
 
         for iteration in range(self._max_iterations):
@@ -74,12 +75,16 @@ class GreyWolfOptimizer(KnapsackAlgorithmBase):
             beta = scored_wolves[1][1][:]
             delta = scored_wolves[2][1][:]
 
-            self.best_value = scored_wolves[0][0]
+            # So sánh và lưu giá trị tốt nhất toàn cục
+            current_best = scored_wolves[0][0]
+            if current_best > self.best_value:
+                self.best_value = current_best
+                self.best_solution = alpha[:]
+            
             _, best_weight = self._calculate_fitness(alpha)
             self.history.append(f"Lần {iteration}: Giá trị={self.best_value}, Trọng lượng={best_weight}")
 
         self.exec_time = time.time() - start_time
-        self.best_solution = alpha
         
         selected_items = [self._item_names[i] for i, v in enumerate(self.best_solution) if v == 1]
         return selected_items, self.history, self.exec_time
