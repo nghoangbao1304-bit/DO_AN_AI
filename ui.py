@@ -1,5 +1,3 @@
-# File: ui.py (Do Dev 1 tạo ban đầu)
-
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, Text
 from knapsack_hc import HillClimbing
@@ -46,89 +44,7 @@ class KnapsackApp:
             self.load_data_and_populate_tree(self.data_files[0])
         except Exception as e:
             pass 
-    def load_selected_data(self):
-        pass 
-    def load_data_and_populate_tree(self, filename: str):
-        pass 
-    def clear_results(self):
-        """Xóa tất cả kết quả và lịch sử."""
-        self.hc_result.delete(1.0, "end"); self.gwo_result.delete(1.0, "end")
-        self.hc_history.delete(1.0, "end"); self.gwo_history.delete(1.0, "end")
 
-    def _run_single_algo(self, method_name, algo_class, result_text, history_text, names, values, weights, max_w, max_iter):
-        """Hàm chạy thuật toán trong một luồng riêng biệt (luồng worker)."""
-        try:
-            if method_name == "Grey Wolf Optimizer":
-                 algo_instance = algo_class(names, values, weights, max_w, max_iter, num_wolves=30)
-            else:
-                 algo_instance = algo_class(names, values, weights, max_w, max_iter)
-
-            selected, hist, t = algo_instance.solve()
-
-            total_val = sum(values[i] for i, n in enumerate(names) if n in selected)
-            total_w = sum(weights[i] for i, n in enumerate(names) if n in selected)
-
-            self.root.after(0, self._update_gui, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text)
-
-        except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror(f"Lỗi {method_name}", str(e)))
-            self.root.after(0, self._check_running_threads) # Gọi hàm của Dev 3
-
-    def _update_gui(self, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text):
-        """Cập nhật giao diện an toàn trên luồng chính của Tkinter."""
-        result_text.delete(1.0, "end")
-        history_text.delete(1.0, "end")
-
-        result_text.insert("end", f"Thuật toán: {method_name}\n")
-        result_text.insert("end", f"Tổng giá trị: {total_val}\nTổng khối lượng: {total_w}/{max_w}\n")
-        result_text.insert("end", f"Số vật phẩm được chọn: {len(selected)}\nThời gian: {t:.4f}s\n\n")
-
-        for i, name in enumerate(selected, 1):
-            idx = names.index(name)
-            result_text.insert("end", f"{i:2d}. {name} ({values[idx]} - {weights[idx]})\n")
-
-        history_text.insert("end", "\n".join(hist))
-
-        self.root.update_idletasks()
-
-        self._check_running_threads() # Gọi hàm của Dev 3
-    def _check_running_threads(self):
-        """Kiểm tra số lượng luồng đang chạy và bật lại nút Run."""
-        if threading.active_count() <= 2: # 1 luồng chính + 1 luồng (nếu còn)
-             self.run_button.config(state="normal")
-    def start_parallel_run(self):
-        """Khởi tạo hai luồng (Thread) để chạy Hill Climbing và GWO song song."""
-        if not self.items:
-            messagebox.showerror("Lỗi", "Vui lòng tải dữ liệu trước.")
-            return
-
-        try:
-            max_w = int(self.max_w_entry.get())
-            max_iter = int(self.iter_entry.get())
-        except ValueError:
-            messagebox.showerror("Lỗi", "Tham số 'Khối lượng tối đa' hoặc 'Số lần lặp' không hợp lệ!")
-            return
-
-        names, values, weights = self.items_data['names'], self.items_data['values'], self.items_data['weights']
-
-        if not names:
-            messagebox.showerror("Lỗi", "Dữ liệu vật phẩm bị rỗng, vui lòng tải lại file.")
-            return
-
-        self.run_button.config(state="disabled")
-        self.clear_results() # Gọi hàm của Dev 4
-
-        thread_hc = threading.Thread(
-            target=self._run_single_algo, # Gọi hàm của Dev 4
-            args=("Hill Climbing", HillClimbing, self.hc_result, self.hc_history, names, values, weights, max_w, max_iter)
-        )
-        thread_hc.start()
-
-        thread_gwo = threading.Thread(
-            target=self._run_single_algo, # Gọi hàm của Dev 4
-            args=("Grey Wolf Optimizer", GreyWolfOptimizer, self.gwo_result, self.gwo_history, names, values, weights, max_w, max_iter)
-        )
-        thread_gwo.start() 
     def load_selected_data(self):
         """Lấy tên file từ Combobox và tải dữ liệu."""
         filename = self.data_combobox.get()
@@ -158,5 +74,90 @@ class KnapsackApp:
         for name, val, w in self.items:
             self.tree.insert("", "end", values=(name, val, w))
 
-        self.clear_results() # Gọi hàm của Dev 4
+        self.clear_results() 
         self.root.title(f"Knapsack Optimization - {filename}")
+
+    def clear_results(self):
+        """Xóa tất cả kết quả và lịch sử."""
+        self.hc_result.delete(1.0, "end"); self.gwo_result.delete(1.0, "end")
+        self.hc_history.delete(1.0, "end"); self.gwo_history.delete(1.0, "end")
+
+    def _run_single_algo(self, method_name, algo_class, result_text, history_text, names, values, weights, max_w, max_iter):
+        """Hàm chạy thuật toán trong một luồng riêng biệt (luồng worker)."""
+        try:
+            if method_name == "Grey Wolf Optimizer":
+                 algo_instance = algo_class(names, values, weights, max_w, max_iter, num_wolves=30)
+            else:
+                 algo_instance = algo_class(names, values, weights, max_w, max_iter)
+
+            selected, hist, t = algo_instance.solve()
+
+            total_val = sum(values[i] for i, n in enumerate(names) if n in selected)
+            total_w = sum(weights[i] for i, n in enumerate(names) if n in selected)
+
+            self.root.after(0, self._update_gui, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text)
+
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror(f"Lỗi {method_name}", str(e)))
+            self.root.after(0, self._check_running_threads) 
+
+    def _update_gui(self, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text):
+        """Cập nhật giao diện an toàn trên luồng chính của Tkinter."""
+        result_text.delete(1.0, "end")
+        history_text.delete(1.0, "end")
+
+        result_text.insert("end", f"Thuật toán: {method_name}\n")
+        result_text.insert("end", f"Tổng giá trị: {total_val}\nTổng khối lượng: {total_w}/{max_w}\n")
+        result_text.insert("end", f"Số vật phẩm được chọn: {len(selected)}\nThời gian: {t:.4f}s\n\n")
+
+        for i, name in enumerate(selected, 1):
+            idx = names.index(name)
+            result_text.insert("end", f"{i:2d}. {name} ({values[idx]} - {weights[idx]})\n")
+
+        history_text.insert("end", "\n".join(hist))
+
+        self.root.update_idletasks()
+
+        self._check_running_threads() 
+
+    def _check_running_threads(self):
+        """Kiểm tra số lượng luồng đang chạy và bật lại nút Run."""
+        if threading.active_count() <= 2: 
+             self.run_button.config(state="normal")
+             
+    def start_parallel_run(self):
+        """Khởi tạo hai luồng (Thread) để chạy Hill Climbing và GWO song song."""
+        if not self.items:
+            messagebox.showerror("Lỗi", "Vui lòng tải dữ liệu trước.")
+            return
+
+        try:
+            max_w = int(self.max_w_entry.get())
+            max_iter = int(self.iter_entry.get())
+        except ValueError:
+            messagebox.showerror("Lỗi", "Tham số 'Khối lượng tối đa' hoặc 'Số lần lặp' không hợp lệ!")
+            return
+
+        names, values, weights = self.items_data['names'], self.items_data['values'], self.items_data['weights']
+
+        if not names:
+            messagebox.showerror("Lỗi", "Dữ liệu vật phẩm bị rỗng, vui lòng tải lại file.")
+            return
+
+        self.run_button.config(state="disabled")
+        self.clear_results() 
+
+        thread_hc = threading.Thread(
+            target=self._run_single_algo, 
+            args=("Hill Climbing", HillClimbing, self.hc_result, self.hc_history, names, values, weights, max_w, max_iter)
+        )
+        thread_hc.start()
+
+        thread_gwo = threading.Thread(
+            target=self._run_single_algo, 
+            args=("Grey Wolf Optimizer", GreyWolfOptimizer, self.gwo_result, self.gwo_history, names, values, weights, max_w, max_iter)
+        )
+        thread_gwo.start() 
+    
+
+    
