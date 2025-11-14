@@ -31,6 +31,7 @@ class HillClimbing(KnapsackAlgorithmBase):
         self.best_solution = current_solution[:]
         self.best_value, best_weight = current_value, current_weight
         self.history = []
+        self.history_values = []
 
         for iteration in range(self._max_iterations):
             neighbor = self._generate_neighbor(current_solution)
@@ -44,6 +45,7 @@ class HillClimbing(KnapsackAlgorithmBase):
                     self.best_value, best_weight = current_value, current_weight
 
             self.history.append(f"Lần {iteration}: Giá trị={current_value}, Trọng lượng={current_weight}")
+            self.history_values.append(self.best_value)  # Lưu giá trị tốt nhất
 
         self.exec_time = time.time() - start_time
         

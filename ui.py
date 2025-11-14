@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox, simpledialog, Text
 from knapsack_hc import HillClimbing 
 from knapsack_gwo import GreyWolfOptimizer
 from data_handler import load_knapsack_data_from_csv 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import threading
 from typing import List, Tuple
@@ -23,6 +25,10 @@ class KnapsackApp:
         
         self.items_data = {'names': [], 'values': [], 'weights': []}
         self.items: List[Tuple[str, int, int]] = []
+        
+        # Lưu kết quả của các thuật toán để vẽ biểu đồ
+        self.hc_algo = None
+        self.gwo_algo = None
             
         self.create_widgets()
 
@@ -58,6 +64,8 @@ class KnapsackApp:
         ttk.Button(top_frame, text="Tải Dữ Liệu", command=self.load_selected_data).pack(side="left", padx=5)
         
         ttk.Button(top_frame, text="Xóa kết quả", command=self.clear_results).pack(side="left", padx=10)
+        
+        ttk.Button(top_frame, text="📊 So Sánh Biểu Đồ", command=self.show_comparison_chart).pack(side="left", padx=10)
 
         # ========== TABLE (Dữ liệu vật phẩm) ==========
         columns = ("Tên", "Giá trị", "Khối lượng")
@@ -132,6 +140,8 @@ class KnapsackApp:
         """Xóa tất cả kết quả và lịch sử."""
         self.hc_result.delete(1.0, "end"); self.gwo_result.delete(1.0, "end")
         self.hc_history.delete(1.0, "end"); self.gwo_history.delete(1.0, "end")
+        self.hc_algo = None
+        self.gwo_algo = None
 
     
     def _run_single_algo(self, method_name, algo_class, result_text, history_text, names, values, weights, max_w, max_iter):
@@ -147,13 +157,13 @@ class KnapsackApp:
             total_val = sum(values[i] for i, n in enumerate(names) if n in selected)
             total_w = sum(weights[i] for i, n in enumerate(names) if n in selected)
 
-            self.root.after(0, self._update_gui, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text)
+            self.root.after(0, self._update_gui, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text, algo_instance)
             
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror(f"Lỗi {method_name}", str(e)))
             self.root.after(0, self._check_running_threads) 
 
-    def _update_gui(self, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text):
+    def _update_gui(self, method_name, selected, hist, t, total_val, total_w, max_w, names, values, weights, result_text, history_text, algo_instance):
         """Cập nhật giao diện an toàn trên luồng chính của Tkinter."""
         result_text.delete(1.0, "end")
         history_text.delete(1.0, "end")
@@ -167,6 +177,12 @@ class KnapsackApp:
             result_text.insert("end", f"{i:2d}. {name} ({values[idx]} - {weights[idx]})\n")
 
         history_text.insert("end", "\n".join(hist))
+        
+        # Lưu instance để vẽ biểu đồ
+        if method_name == "Hill Climbing":
+            self.hc_algo = algo_instance
+        elif method_name == "Grey Wolf Optimizer":
+            self.gwo_algo = algo_instance
         
         self.root.update_idletasks()
         
@@ -210,3 +226,54 @@ class KnapsackApp:
             args=("Grey Wolf Optimizer", GreyWolfOptimizer, self.gwo_result, self.gwo_history, names, values, weights, max_w, max_iter)
         )
         thread_gwo.start()
+
+    def show_comparison_chart(self):
+        """Hiển thị biểu đồ so sánh hai thuật toán."""
+        if self.hc_algo is None or self.gwo_algo is None:
+            messagebox.showwarning("Chưa có dữ liệu", "Vui lòng chạy cả hai thuật toán trước khi xem biểu đồ so sánh!")
+            return
+        
+        # Tạo cửa sổ mới cho biểu đồ
+        chart_window = tk.Toplevel(self.root)
+        chart_window.title("Biểu Đồ So Sánh Thuật Toán")
+        chart_window.geometry("1000x600")
+        
+        # Tạo figure matplotlib
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Vẽ đường cho Hill Climbing
+        iterations_hc = range(len(self.hc_algo.history_values))
+        ax.plot(iterations_hc, self.hc_algo.history_values, 
+                label='Hill Climbing', marker='o', markersize=3, linewidth=2, color='blue')
+        
+        # Vẽ đường cho Grey Wolf Optimizer
+        iterations_gwo = range(len(self.gwo_algo.history_values))
+        ax.plot(iterations_gwo, self.gwo_algo.history_values, 
+                label='Grey Wolf Optimizer', marker='s', markersize=3, linewidth=2, color='red')
+        
+        # Thiết lập labels và title
+        ax.set_xlabel('Generation (Thế hệ)', fontsize=12)
+        ax.set_ylabel('Fitness (Giá trị thích nghi)', fontsize=12)
+        ax.set_title('So Sánh Hiệu Suất: Hill Climbing vs Grey Wolf Optimizer', fontsize=14, fontweight='bold')
+        ax.legend(loc='best', fontsize=11)
+        ax.grid(True, alpha=0.3)
+        
+        # Thêm thông tin cuối cùng
+        final_hc = self.hc_algo.best_value
+        final_gwo = self.gwo_algo.best_value
+        time_hc = self.hc_algo.exec_time
+        time_gwo = self.gwo_algo.exec_time
+        
+        info_text = f"Kết quả cuối:\nHC: {final_hc} ({time_hc:.4f}s) | GWO: {final_gwo} ({time_gwo:.4f}s)"
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes, 
+                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+                fontsize=10)
+        
+        # Nhúng biểu đồ vào Tkinter window
+        canvas = FigureCanvasTkAgg(fig, master=chart_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+        # Thêm nút đóng
+        close_btn = ttk.Button(chart_window, text="Đóng", command=chart_window.destroy)
+        close_btn.pack(pady=10)

@@ -25,6 +25,7 @@ class KnapsackAlgorithmBase(ABC):
         self._max_iterations = max_iterations
         self._n = len(item_names)
         self.history = []
+        self.history_values = []  # Lưu giá trị tốt nhất theo từng iteration
         self.best_solution = []
         self.best_value = 0
         self.exec_time = 0.0
