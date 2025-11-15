@@ -18,6 +18,7 @@ class KnapsackApp:
         self.root.geometry("1400x800") 
         
         self.data_files = [
+            'dataset_20.csv',
             'dataset_500.csv',
             'dataset_1000.csv',
             'products.csv'
